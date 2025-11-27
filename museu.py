@@ -215,24 +215,119 @@ while True:
             print("\nArtefato histórico cadastrado com sucesso!\n")
 
     if operacao == 2:
-        print("\n" + "─"*70)
-        print("CONSULTA DE ITENS".center(70))
-        print("─"*70 + "\n")
-        
-        campo = input("Digite o campo para consulta (ex: nome, setor, localidade): ")
-        valor = input(f"Digite o valor para buscar em '{campo}': ")
+        consultabd = int(input("Você deseja consultar um Item, Obra ou Artefato? \n" 
+            "[1] - Item\n"
+            "[2] - Obra\n" 
+            "[3] - Artefato\n"
+            "\n➤ Sua escolha: "))
+        if consultabd == 1:
+            print("\n" + "─"*70)
+            print("CONSULTA DE ITENS".center(70))
+            print("─"*70 + "\n")
+            
+            campo = input("Digite o campo para consulta (ex: nome, setor, localidade): ")
+            valor = input(f"Digite o valor para buscar em '{campo}': ")
 
-        consulta = f"SELECT * FROM Item WHERE {campo} LIKE ?"
-        cursor.execute(consulta, ('%' + valor + '%',)) 
-        resultado = cursor.fetchall()
+            consulta = f"SELECT * FROM Item WHERE {campo} LIKE ?"
+            cursor.execute(consulta, ('%' + valor + '%',)) 
+            resultado = cursor.fetchall()
 
-        if resultado:
-            print("\nResultados encontrados:")
-            for linha in resultado:
-                print(linha)
-        else:
-            print("\n Nenhum resultado encontrado")
+            if resultado:
+                print("\nResultados encontrados:")
+                for linha in resultado:
+                    print(f"\nID: {linha[0]}")
+                    print(f"Nome: {linha[1]}")
+                    print(f"Data: {linha[2]}")
+                    print(f"Descrição: {linha[3]}")
+                    print(f"Setor: {linha[4]}")
+                    print(f"Localidade: {linha[5]}")
+                    print(f"Em exposição: {'Sim' if linha[6] else 'Não'}")
+                    print(f"Custo mensal: {linha[7]}")
+            else:
+                print("\nNenhum resultado encontrado")
+            
+            input("\nPressione ENTER para continuar...")
         
-        input("\nPressione ENTER para continuar...")
+        if consultabd == 2:
+            print("\n" + "─"*70)
+            print("CONSULTA DE OBRA".center(70))
+            print("─"*70 + "\n")
+            
+            campo = input("Digite o campo para consulta (ex: nome, autor, movimentoArtistico): ")
+            valor = input(f"Digite o valor para buscar em '{campo}': ")
+
+            # JOIN entre Item e Obras
+            consulta = f"""
+            SELECT Item.id, Item.nome, Item.data, Item.descricao, Item.setor, 
+                   Item.localidade, Item.exposicao, Item.custoMes,
+                   Obras.autor, Obras.movimentoArtistico, Obras.restaurado, Obras.dataRestauracao
+            FROM Item
+            INNER JOIN Obras ON Item.id = Obras.item_id
+            WHERE {campo} LIKE ?
+            """
+            cursor.execute(consulta, ('%' + valor + '%',))
+            resultado = cursor.fetchall()
+
+            if resultado:
+                print("\nResultados encontrados:")
+                for linha in resultado:
+                    print(f"\nID: {linha[0]}")
+                    print(f"Nome: {linha[1]}")
+                    print(f"Data: {linha[2]}")
+                    print(f"Descrição: {linha[3]}")
+                    print(f"Setor: {linha[4]}")
+                    print(f"Localidade: {linha[5]}")
+                    print(f"Em exposição: {'Sim' if linha[6] else 'Não'}")
+                    print(f"Custo mensal: {linha[7]}")
+                    print(f"Autor: {linha[8]}")
+                    print(f"Movimento Artístico: {linha[9]}")
+                    print(f"Restaurado: {'Sim' if linha[10] else 'Não'}")
+                    print(f"Data Restauração: {linha[11]}")
+                    print("─"*70)
+            else:
+                print("\nNenhum resultado encontrado")
+            
+            input("\nPressione ENTER para continuar...")
+        
+        if consultabd == 3:
+            print("\n" + "─"*70)
+            print("CONSULTA DE ARTEFATO".center(70))
+            print("─"*70 + "\n")
+            
+            campo = input("Digite o campo para consulta (ex: nome, epoca, localidade): ")
+            valor = input(f"Digite o valor para buscar em '{campo}': ")
+
+            # JOIN entre Item e Artefatos
+            consulta = f"""
+            SELECT Item.id, Item.nome, Item.data, Item.descricao, Item.setor, 
+                   Item.localidade, Item.exposicao, Item.custoMes,
+                   Artefatos.epoca, Artefatos.fossil, Artefatos.mineral, Artefatos.origemHumana
+            FROM Item
+            INNER JOIN Artefatos ON Item.id = Artefatos.item_id
+            WHERE {campo} LIKE ?
+            """
+            cursor.execute(consulta, ('%' + valor + '%',))
+            resultado = cursor.fetchall()
+
+            if resultado:
+                print("\nResultados encontrados:")
+                for linha in resultado:
+                    print(f"\nID: {linha[0]}")
+                    print(f"Nome: {linha[1]}")
+                    print(f"Data: {linha[2]}")
+                    print(f"Descrição: {linha[3]}")
+                    print(f"Setor: {linha[4]}")
+                    print(f"Localidade: {linha[5]}")
+                    print(f"Em exposição: {'Sim' if linha[6] else 'Não'}")
+                    print(f"Custo mensal: {linha[7]}")
+                    print(f"Época: {linha[8]}")
+                    print(f"Fóssil: {'Sim' if linha[9] else 'Não'}")
+                    print(f"Mineral: {'Sim' if linha[10] else 'Não'}")
+                    print(f"Origem Humana: {'Sim' if linha[11] else 'Não'}")
+                    print("─"*70)
+            else:
+                print("\nNenhum resultado encontrado")
+            
+            input("\nPressione ENTER para continuar...")
 
 conn.close()
