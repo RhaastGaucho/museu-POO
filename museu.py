@@ -50,14 +50,14 @@ class Artefatos(Item):
 class BancoDeDados():
     def __init__(self, nome_bd='museu.db'):
         self.nome_bd = nome_bd
-        self.init_db()
+        self.iniBD()
 
     def get_conexao(self):
         return sqlite3.connect('museu.db')
     
     def iniBD(self):
         
-        conn = self.get_conexao(self.nome_bd)
+        conn = self.get_conexao()
         cursor = conn.cursor()
         cursor.execute("PRAGMA foreign_keys = ON;")
 
@@ -100,15 +100,140 @@ class BancoDeDados():
 
         conn.commit()
     def inserir(self, item):
-        if item is Obras:
-            tabelaIns = "Obras"
-        elif item is Artefatos:
-            tabelaIns = "Artefatos"
-        else:
+        conn = self.get_conexao()
+        cursor = conn.cursor()
+        
+        cursor.execute(
+            "INSERT INTO Item (data, descricao, setor, localidade, exposicao, nome, custoMes) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (item.data, item.descricao, item.setor, item.localidade, int(item.exposicao), item.nome, item.custoMes)
+        )
+
+        idFK = cursor.lastrowid
+
+        if isinstance(item, Obras):
             cursor.execute(
-                "INSERT INTO Item (data, descricao, setor, localidade, exposicao, nome, custoMes) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (data, descricao, setor, localidade, exposicao, nome, custo)
+                "INSERT INTO Obras (item_id, movimentoArtistico, restaurado, dataRestauracao, autor) VALUES (?,?,?,?,?)",
+                (idFK, item.movimentoArtistico, int(item.restaurado), item.dataRestauracao, item.autor)
             )
+        elif isinstance(item, Artefatos):
+            cursor.execute(
+                "INSERT INTO Artefatos (item_id, epoca, fossil, mineral, origemHumana) VALUES (?,?,?,?,?)",
+                (idFK, item.epoca, int(item.fossil), int(item.mineral), int(item.origemHumana))
+            )
+        
+        conn.commit()
+        conn.close()
+        print(f'ID do objeto adicionado: {idFK}')
+
+    def consultar(self, tabela, campo, valor):
+        conn = self.get_conexao()
+        cursor = conn.cursor()
+        
+        if tabela == "Item":
+            consulta = f"SELECT * FROM {tabela} WHERE {campo} = ?"
+            cursor.execute(consulta, (valor,))
+            resultados = cursor.fetchall()
+            if resultados:
+                print("\nResultados encontrados:")
+                for linha in resultados:
+                    print(f"\nID: {linha[0]}")
+                    print(f"Data: {linha[1]}")
+                    print(f"Descrição: {linha[2]}")
+                    print(f"Setor: {linha[3]}")
+                    print(f"Localidade: {linha[4]}")
+                    print(f"Em exposição: {'Sim' if linha[5] else 'Não'}")
+                    print(f"Nome: {linha[6]}")
+                    print(f"Custo mensal: {linha[7]}")
+            else:
+                print("\nNenhum resultado encontrado")
+        
+        elif tabela == "Obras":
+            # JOIN para trazer dados de Item e Obras
+            consulta = f"""
+            SELECT Item.id, Item.data, Item.descricao, Item.setor, Item.localidade, Item.exposicao, Item.nome, Item.custoMes,
+                   Obras.movimentoArtistico, Obras.restaurado, Obras.dataRestauracao, Obras.autor
+            FROM Item
+            JOIN Obras ON Item.id = Obras.item_id
+            WHERE Item.{campo} = ?
+            """
+            cursor.execute(consulta, (valor,))
+            resultados = cursor.fetchall()
+            if resultados:
+                print("\nResultados encontrados:")
+                for linha in resultados:
+                    print(f"\nID: {linha[0]}")
+                    print(f"Data: {linha[1]}")
+                    print(f"Descrição: {linha[2]}")
+                    print(f"Setor: {linha[3]}")
+                    print(f"Localidade: {linha[4]}")
+                    print(f"Em exposição: {'Sim' if linha[5] else 'Não'}")
+                    print(f"Nome: {linha[6]}")
+                    print(f"Custo mensal: {linha[7]}")
+                    print(f"Movimento Artístico: {linha[8]}")
+                    print(f"Restaurado: {'Sim' if linha[9] else 'Não'}")
+                    print(f"Data Restauração: {linha[10]}")
+                    print(f"Autor: {linha[11]}")
+            else:
+                print("\nNenhum resultado encontrado")
+        
+        elif tabela == "Artefatos":
+            # JOIN para trazer dados de Item e Artefatos
+            consulta = f"""
+            SELECT Item.id, Item.data, Item.descricao, Item.setor, Item.localidade, Item.exposicao, Item.nome, Item.custoMes,
+                   Artefatos.epoca, Artefatos.fossil, Artefatos.mineral, Artefatos.origemHumana
+            FROM Item
+            JOIN Artefatos ON Item.id = Artefatos.item_id
+            WHERE Item.{campo} = ?
+            """
+            cursor.execute(consulta, (valor,))
+            resultados = cursor.fetchall()
+            if resultados:
+                print("\nResultados encontrados:")
+                for linha in resultados:
+                    print(f"\nID: {linha[0]}")
+                    print(f"Data: {linha[1]}")
+                    print(f"Descrição: {linha[2]}")
+                    print(f"Setor: {linha[3]}")
+                    print(f"Localidade: {linha[4]}")
+                    print(f"Em exposição: {'Sim' if linha[5] else 'Não'}")
+                    print(f"Nome: {linha[6]}")
+                    print(f"Custo mensal: {linha[7]}")
+                    print(f"Época: {linha[8]}")
+                    print(f"Fóssil: {'Sim' if linha[9] else 'Não'}")
+                    print(f"Mineral: {'Sim' if linha[10] else 'Não'}")
+                    print(f"Origem Humana: {'Sim' if linha[11] else 'Não'}")
+            else:
+                print("\nNenhum resultado encontrado")
+        
+        conn.close()
+    def update(self, tabela, id, coluna, novo_valor):
+        conn = self.get_conexao()
+        cursor = conn.cursor()
+        if tabela == "Item":
+            consulta = f"UPDATE Item SET {coluna} = ? WHERE id = ?"
+        elif tabela == "Obras":
+            consulta = f"UPDATE Obras SET {coluna} = ? WHERE item_id = ?"
+        elif tabela == "Artefatos":
+            consulta = f"UPDATE Artefatos SET {coluna} = ? WHERE item_id = ?"
+        cursor.execute(consulta, (novo_valor, id))
+        conn.commit()
+        conn.close()
+    def deletar(self, tabela, id):
+        conn = self.get_conexao()
+        cursor = conn.cursor()
+        if tabela == "Item":
+            consulta = f"DELETE FROM Item WHERE id = ?"
+        elif tabela == "Obras":
+            consulta = f"DELETE FROM Obras WHERE item_id = ?"
+        elif tabela == "Artefatos":
+            consulta = f"DELETE FROM Artefatos WHERE item_id = ?"
+        cursor.execute(consulta, (id,))
+        conn.commit()
+        conn.close()
+
+bd = BancoDeDados()
+
+bd.iniBD()
 
 print("\n" + "="*70)
 print("BEM-VINDO AO SISTEMA DE GERENCIAMENTO DO MUSEU".center(70))
@@ -175,45 +300,35 @@ while True:
             input("Pressione ENTER para continuar...")
             print("\n")
         
-        objeto = int(input(
-            "Qual tipo de objeto você deseja inserir?\n\n"
-            "[1] - Item (não classificado)\n" 
-            "[2] - Obra de Arte\n" 
-            "[3] - Artefato Histórico\n"
-            "\n➤ Sua escolha: "
-        ))
-
-        if objeto == 1:
+        criarTipo = int(input("Você deseja criar um Item, Obra ou Artefato? \n" 
+            "[1] - Item\n"
+            "[2] - Obra\n" 
+            "[3] - Artefato\n"
+            "\n➤ Sua escolha: "))
+        
+        if criarTipo == 1:
             print("\n" + "─"*70)
-            print("CADASTRO DE ITEM NÃO CLASSIFICADO".center(70))
+            print("CRIAÇÃO DE ITEM".center(70))
             print("─"*70 + "\n")
-
+            
             data = input("Data de aquisição [Ex: 12/02/2002]: ")
             descricao = input("Descrição (o que é): ")
-            setor = 'Análise'
+            setor = input("Setor: ")
             localidade = input("Localidade (onde o item foi encontrado): ")
-            exposicao = False
-            nome = ''
-            custo = 0
+            exposicao = bool(int(input("Está em exposição? (1 - Sim, 0 - Não): ")))
+            nome = input("Nome do item: ")
+            if exposicao == 1:    
+                custo = input("Custo de exposição por mês: ")
+            else:
+                custo = 0
 
-            cursor.execute(
-                "INSERT INTO Item (data, descricao, setor, localidade, exposicao, nome, custoMes) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (data, descricao, setor, localidade, exposicao, nome, custo)
-            )
-
-            idFK = cursor.lastrowid
-
+            novoItem = Item(data, descricao, setor, None, localidade, exposicao, nome, custo)
+            bd.inserir(novoItem)
             conn.commit()
-            
-            item = Item(data, descricao, setor, idFK, localidade, exposicao, nome, custo)
 
-            itens.append(item)
-
-            print("\nItem cadastrado com sucesso! Enviado para o setor de Análise.\n")
-
-        elif objeto == 2:
+        elif criarTipo == 2:
             print("\n" + "─"*70)
-            print("CADASTRO DE OBRA DE ARTE".center(70))
+            print("CRIAÇÃO DE OBRA".center(70))
             print("─"*70 + "\n")
 
             data = input("Data de aquisição [Ex: 12/02/2002]: ")
@@ -222,23 +337,11 @@ while True:
             localidade = input("Localidade (onde foi encontrado): ")
             exposicao = bool(int(input("Está em exposição? (1 - Sim, 0 - Não): ")))
             nome = input("Nome da obra: ")
-            if exposicao == 1:
+            if exposicao == 1:    
                 custo = input("Custo de exposição por mês: ")
             else:
-                custo = 0.0
+                custo = 0
 
-            # Insere na tabela Item
-            cursor.execute(
-                "INSERT INTO Item (data, descricao, setor, localidade, exposicao, nome, custoMes) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (data, descricao, setor, localidade, exposicao, nome, custo)
-            )
-
-            # Pega o ID do item recém-inserido
-            idFK = cursor.lastrowid
-
-            conn.commit()
-
-            # Agora insere os dados específicos da Obra
             autor = input("Autor da obra: ")
             movimentoArtistico = input("Movimento Artístico [Ex: Barroco, Renascimento]: ")
             restaurado = bool(int(input("A obra foi restaurada? (1 - Sim, 0 - Não): ")))
@@ -247,20 +350,12 @@ while True:
             else:
                 dataRestauracao = ''
 
-            cursor.execute(
-                "INSERT INTO Obras (item_id, movimentoArtistico, restaurado, dataRestauracao, autor) VALUES (?,?,?,?,?)",
-                (idFK, movimentoArtistico, restaurado, dataRestauracao, autor)
-            )
-
+            novaObra = Obras(data, descricao, setor, None, localidade, exposicao, nome, custo, movimentoArtistico, restaurado, dataRestauracao, autor)
+            bd.inserir(novaObra)
             conn.commit()
-
-            obra = Obras(data, descricao, setor, idFK, exposicao, nome, custo)
-            
-            print("\nObra de arte cadastrada com sucesso!\n")
-
-        else:
+        elif criarTipo == 3:
             print("\n" + "─"*70)
-            print("CADASTRO DE ARTEFATO HISTÓRICO".center(70))
+            print("CRIAÇÃO DE ARTEFATO".center(70))
             print("─"*70 + "\n")
 
             data = input("Data de aquisição [Ex: 12/02/2002]: ")
@@ -269,39 +364,21 @@ while True:
             localidade = input("Localidade (onde foi encontrado): ")
             exposicao = bool(int(input("Está em exposição? (1 - Sim, 0 - Não): ")))
             nome = input("Nome do artefato: ")
-            if exposicao == 1:
-                custo = input("Custo de exposição por mês: ")
-            else:
-                custo = 0.0
+            custo = input("Custo de exposição por mês: ")
 
-            # Insere na tabela Item
-            cursor.execute(
-                "INSERT INTO Item (data, descricao, setor, localidade, exposicao, nome, custoMes) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (data, descricao, setor, localidade, exposicao, nome, custo)
-            )
-
-            # Pega o ID do item recém-inserido
-            idFK = cursor.lastrowid
-
-            conn.commit()
-
-            # Agora insere os dados específicos do Artefato
             epoca = input("Época [Ex: Pré-Histórico, Medieval]: ")
             fossil = bool(int(input("É um fóssil? (1 - Sim, 0 - Não): ")))
             mineral = bool(int(input("É um mineral? (1 - Sim, 0 - Não): ")))
             origemHumana = bool(int(input("Tem origem humana? (1 - Sim, 0 - Não): ")))
 
-            cursor.execute(
-                "INSERT INTO Artefatos (item_id, epoca, fossil, mineral, origemHumana) VALUES (?,?,?,?,?)",
-                (idFK, epoca, fossil, mineral, origemHumana)
-            )
-
+            novoArtefato = Artefatos(data, descricao, setor, None, localidade, exposicao, nome, custo, epoca, fossil, mineral, origemHumana)
+            bd.inserir(novoArtefato)
             conn.commit()
+        
+        print("\nItem inserido com sucesso!\n")
             
-            print("\nArtefato histórico cadastrado com sucesso!\n")
-
-        print(f'ID do objeto adicionado: {idFK}')
-
+        input("\nPressione ENTER para continuar...")
+        
     if operacao == 2:
         print("\n" + "─"*70)
         print("CONSULTA DE OBJETOS NO BANCO DO MUSEU".center(70))
@@ -320,23 +397,7 @@ while True:
             campo = input("Digite o campo para consulta (ex: nome, setor, localidade): ")
             valor = input(f"Digite o valor para buscar em '{campo}': ")
 
-            consulta = f"SELECT * FROM Item WHERE {campo} LIKE ?"
-            cursor.execute(consulta, ('%' + valor + '%',)) 
-            resultado = cursor.fetchall()
-
-            if resultado:
-                print("\nResultados encontrados:")
-                for linha in resultado:
-                    print(f"\nID: {linha[0]}")
-                    print(f"Nome: {linha[1]}")
-                    print(f"Data: {linha[2]}")
-                    print(f"Descrição: {linha[3]}")
-                    print(f"Setor: {linha[4]}")
-                    print(f"Localidade: {linha[5]}")
-                    print(f"Em exposição: {'Sim' if linha[6] else 'Não'}")
-                    print(f"Custo mensal: {linha[7]}")
-            else:
-                print("\nNenhum resultado encontrado")
+            bd.consultar("Item", campo, valor)
             
             input("\nPressione ENTER para continuar...")
         
@@ -348,37 +409,8 @@ while True:
             campo = input("Digite o campo para consulta (ex: nome, autor, movimentoArtistico): ")
             valor = input(f"Digite o valor para buscar em '{campo}': ")
 
-            # JOIN entre Item e Obras
-            consulta = f"""
-            SELECT Item.id, Item.nome, Item.data, Item.descricao, Item.setor, 
-                   Item.localidade, Item.exposicao, Item.custoMes,
-                   Obras.autor, Obras.movimentoArtistico, Obras.restaurado, Obras.dataRestauracao
-            FROM Item
-            INNER JOIN Obras ON Item.id = Obras.item_id
-            WHERE {campo} LIKE ?
-            """
-            cursor.execute(consulta, ('%' + valor + '%',))
-            resultado = cursor.fetchall()
-
-            if resultado:
-                print("\nResultados encontrados:")
-                for linha in resultado:
-                    print(f"\nID: {linha[0]}")
-                    print(f"Nome: {linha[1]}")
-                    print(f"Data: {linha[2]}")
-                    print(f"Descrição: {linha[3]}")
-                    print(f"Setor: {linha[4]}")
-                    print(f"Localidade: {linha[5]}")
-                    print(f"Em exposição: {'Sim' if linha[6] else 'Não'}")
-                    print(f"Custo mensal: {linha[7]}")
-                    print(f"Autor: {linha[8]}")
-                    print(f"Movimento Artístico: {linha[9]}")
-                    print(f"Restaurado: {'Sim' if linha[10] else 'Não'}")
-                    print(f"Data Restauração: {linha[11]}")
-                    print("─"*70)
-            else:
-                print("\nNenhum resultado encontrado")
-            
+            bd.consultar("Obras", campo, valor)
+              
             input("\nPressione ENTER para continuar...")
         
         if consultabd == 3:
@@ -389,36 +421,7 @@ while True:
             campo = input("Digite o campo para consulta (ex: nome, epoca, localidade): ")
             valor = input(f"Digite o valor para buscar em '{campo}': ")
 
-            # JOIN entre Item e Artefatos
-            consulta = f"""
-            SELECT Item.id, Item.nome, Item.data, Item.descricao, Item.setor, 
-                   Item.localidade, Item.exposicao, Item.custoMes,
-                   Artefatos.epoca, Artefatos.fossil, Artefatos.mineral, Artefatos.origemHumana
-            FROM Item
-            INNER JOIN Artefatos ON Item.id = Artefatos.item_id
-            WHERE {campo} LIKE ?
-            """
-            cursor.execute(consulta, ('%' + valor + '%',))
-            resultado = cursor.fetchall()
-
-            if resultado:
-                print("\nResultados encontrados:")
-                for linha in resultado:
-                    print(f"\nID: {linha[0]}")
-                    print(f"Nome: {linha[1]}")
-                    print(f"Data: {linha[2]}")
-                    print(f"Descrição: {linha[3]}")
-                    print(f"Setor: {linha[4]}")
-                    print(f"Localidade: {linha[5]}")
-                    print(f"Em exposição: {'Sim' if linha[6] else 'Não'}")
-                    print(f"Custo mensal: {linha[7]}")
-                    print(f"Época: {linha[8]}")
-                    print(f"Fóssil: {'Sim' if linha[9] else 'Não'}")
-                    print(f"Mineral: {'Sim' if linha[10] else 'Não'}")
-                    print(f"Origem Humana: {'Sim' if linha[11] else 'Não'}")
-                    print("─"*70)
-            else:
-                print("\nNenhum resultado encontrado")
+            bd.consultar("Artefatos", campo, valor)  
             
             input("\nPressione ENTER para continuar...")
 
@@ -457,7 +460,7 @@ while True:
             coluna = input("Informe a coluna que deseja alterar: ")
             novoValor = input("Informe o novo valor da célula: ")
 
-            cursor.execute(f"UPDATE {tabelaAlt} SET {coluna} = '{novoValor}' WHERE {idTable} = {idAlt}")
+            bd.update(tabelaAlt, idAlt, coluna, novoValor)
             conn.commit()
 
         elif alterarCelulaLinha == 2:
@@ -486,15 +489,29 @@ while True:
             if alterarTable == 1:
                 data = input("Data de aquisição [Ex: 12/02/2002]: ")
                 descricao = input("Descrição (o que é): ")
+                setor = input("Setor: ")
                 localidade = input("Localidade (onde o item foi encontrado): ")
+                exposicao = bool(int(input("Está em exposição? (1 - Sim, 0 - Não): ")))
+                nome = input("Nome do item: ")
+                if exposicao == 1:    
+                    custo = input("Custo de exposição por mês: ")
+                else:
+                    custo = 0
 
-                cursor.execute(f"UPDATE {tabelaAlt} SET data = '{data}', descricao = '{descricao}', localidade = '{localidade}' WHERE {idTable} = {idAlt}")
+                bd.update("Item", idAlt, "data", data)
+                bd.update("Item", idAlt, "descricao", descricao)
+                bd.update("Item", idAlt, "setor", setor)
+                bd.update("Item", idAlt, "localidade", localidade)
+                bd.update("Item", idAlt, "exposicao", exposicao)
+                bd.update("Item", idAlt, "nome", nome)
+                bd.update("Item", idAlt, "custoMes", custo)
+                
                 conn.commit()
                 print("\nItem atualizado com sucesso!\n")
                 
             elif alterarTable == 2:
                 print("\n" + "─"*70)
-                print("ALTERAR LINHA DA TABELA OBJETOS".center(70))
+                print("ALTERAR LINHA DA TABELA OBRAS".center(70))
                 print("─"*70 + "\n")
 
                 data = input("Data de aquisição [Ex: 12/02/2002]: ")
@@ -507,12 +524,6 @@ while True:
                     custo = input("Custo de exposição por mês: ")
                 else:
                     custo = 0
-
-                cursor.execute(
-                    f"UPDATE Item SET data = ?, descricao = ?, setor = ?, localidade = ?, exposicao = ?, nome = ?, custoMes = ? WHERE id = ?",
-                    (data, descricao, setor, localidade, exposicao, nome, custo, idAlt)
-                )
-                
                 autor = input("Autor da obra: ")
                 movimentoArtistico = input("Movimento Artístico [Ex: Barroco, Renascimento]: ")
                 restaurado = bool(int(input("A obra foi restaurada? (1 - Sim, 0 - Não): ")))
@@ -520,11 +531,18 @@ while True:
                     dataRestauracao = input("Data da restauração [Ex: 12/03/2004]: ")
                 else:
                     dataRestauracao = ''
-
-                cursor.execute(
-                    f"UPDATE Obras SET movimentoArtistico = ?, restaurado = ?, dataRestauracao = ?, autor = ? WHERE item_id = ?",
-                    (movimentoArtistico, restaurado, dataRestauracao, autor, idAlt)
-                )
+                
+                bd.update("Item", idAlt, "data", data)
+                bd.update("Item", idAlt, "descricao", descricao)
+                bd.update("Item", idAlt, "setor", setor)
+                bd.update("Item", idAlt, "localidade", localidade)
+                bd.update("Item", idAlt, "exposicao", exposicao)
+                bd.update("Item", idAlt, "nome", nome)
+                bd.update("Item", idAlt, "custoMes", custo)
+                bd.update("Obras", idAlt, "autor", autor)
+                bd.update("Obras", idAlt, "movimentoArtistico", movimentoArtistico)
+                bd.update("Obras", idAlt, "restaurado", restaurado)
+                bd.update("Obras", idAlt, "dataRestauracao", dataRestauracao)
                 
                 conn.commit()
                 print("\nObra atualizada com sucesso!\n")
@@ -541,21 +559,22 @@ while True:
                 exposicao = bool(int(input("Está em exposição? (1 - Sim, 0 - Não): ")))
                 nome = input("Nome do artefato: ")
                 custo = input("Custo de exposição por mês: ")
-
-                cursor.execute(
-                    f"UPDATE Item SET data = ?, descricao = ?, setor = ?, localidade = ?, exposicao = ?, nome = ?, custoMes = ? WHERE id = ?",
-                    (data, descricao, setor, localidade, exposicao, nome, custo, idAlt)
-                )
-                
                 epoca = input("Época [Ex: Pré-Histórico, Medieval]: ")
                 fossil = bool(int(input("É um fóssil? (1 - Sim, 0 - Não): ")))
                 mineral = bool(int(input("É um mineral? (1 - Sim, 0 - Não): ")))
                 origemHumana = bool(int(input("Tem origem humana? (1 - Sim, 0 - Não): ")))
 
-                cursor.execute(
-                    f"UPDATE Artefatos SET epoca = ?, fossil = ?, mineral = ?, origemHumana = ? WHERE item_id = ?",
-                    (epoca, fossil, mineral, origemHumana, idAlt)
-                )
+                bd.update("Item", idAlt, "data", data)
+                bd.update("Item", idAlt, "descricao", descricao)
+                bd.update("Item", idAlt, "setor", setor)
+                bd.update("Item", idAlt, "localidade", localidade)
+                bd.update("Item", idAlt, "exposicao", exposicao)
+                bd.update("Item", idAlt, "nome", nome)
+                bd.update("Item", idAlt, "custoMes", custo)
+                bd.update("Artefatos", idAlt, "epoca", epoca)
+                bd.update("Artefatos", idAlt, "fossil", fossil)
+                bd.update("Artefatos", idAlt, "mineral", mineral)
+                bd.update("Artefatos", idAlt, "origemHumana", origemHumana)
                 
                 conn.commit()
                 print("\nArtefato atualizado com sucesso!\n")
@@ -569,7 +588,7 @@ while True:
         
         idDel = input("informe o ID do objeto que desejas excluir: ")
 
-        cursor.execute(f"DELETE FROM Item WHERE id = {idDel}")
+        bd.deletar("Item", idDel)
         conn.commit()
         
         print("\nObjeto excluido com sucesso!\n")
