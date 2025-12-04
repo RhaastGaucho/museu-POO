@@ -312,19 +312,18 @@ while True:
         
         if criarTipo == 1:
             print("\n" + "─"*70)
-            print("CRIAÇÃO DE ITEM".center(70))
+            print("CRIAÇÃO DE ITEM NÃO CLASSIFICADO".center(70))
             print("─"*70 + "\n")
+            print("  ATENÇÃO: Itens não classificados vão automaticamente para o setor de Análise.")
+            print("    Eles NÃO ficam em exposição e portanto têm custo = 0.\n")
             
             data = input("Data de aquisição [Ex: 12/02/2002]: ")
             descricao = input("Descrição (o que é): ")
-            setor = input("Setor: ")
+            setor = 'Análise'  # Itens não classificados vão para Análise
             localidade = input("Localidade (onde o item foi encontrado): ")
-            exposicao = bool(int(input("Está em exposição? (1 - Sim, 0 - Não): ")))
-            nome = input("Nome do item: ")
-            if exposicao == 1:    
-                custo = input("Custo de exposição por mês: ")
-            else:
-                custo = 0
+            exposicao = False  # Itens não classificados não ficam em exposição
+            nome = ''  # Itens não classificados não têm nome definido
+            custo = 0  # Sem custo pois não está em exposição
             
             novoItem = Item(data, descricao, setor, None, localidade, exposicao, nome, custo)
             idAtr = bd.inserir(novoItem)
