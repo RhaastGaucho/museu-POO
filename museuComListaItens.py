@@ -100,54 +100,137 @@ class BancoDeDados():
 
         conn.commit()
     def inserir(self, item):
-        if item is Obras:
-            cursor.execute(
-                "INSERT INTO Item (data, descricao, setor, localidade, exposicao, nome, custoMes) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (item.data, item.descricao, item.setor, item.localidade, item.exposicao, item.nome, item.custoMes)
-            )
-            
-            idFK = cursor.lastrowid
-            
+        conn = self.get_conexao()
+        cursor = conn.cursor()
+        
+        cursor.execute(
+            "INSERT INTO Item (data, descricao, setor, localidade, exposicao, nome, custoMes) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (item.data, item.descricao, item.setor, item.localidade, int(item.exposicao), item.nome, item.custoMes)
+        )
+
+        idFK = cursor.lastrowid
+
+        if isinstance(item, Obras):
             cursor.execute(
                 "INSERT INTO Obras (item_id, movimentoArtistico, restaurado, dataRestauracao, autor) VALUES (?,?,?,?,?)",
-                (idFK, item.movimentoArtistico, item.restaurado, item.dataRestauracao, item.autor)
+                (idFK, item.movimentoArtistico, int(item.restaurado), item.dataRestauracao, item.autor)
             )
-        elif item is Artefatos:
-            cursor.execute(
-                "INSERT INTO Item (data, descricao, setor, localidade, exposicao, nome, custoMes) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (item.data, item.descricao, item.setor, item.localidade, item.exposicao, item.nome, item.custoMes)
-            )
-            
-            idFK = cursor.lastrowid
-            
+        elif isinstance(item, Artefatos):
             cursor.execute(
                 "INSERT INTO Artefatos (item_id, epoca, fossil, mineral, origemHumana) VALUES (?,?,?,?,?)",
-                (idFK, epoca, fossil, mineral, origemHumana)
+                (idFK, item.epoca, int(item.fossil), int(item.mineral), int(item.origemHumana))
             )
-        else:
-            cursor.execute(
-                "INSERT INTO Item (data, descricao, setor, localidade, exposicao, nome, custoMes) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (item.data, item.descricao, item.setor, item.localidade, item.exposicao, item.nome, item.custoMes)
-            )
-    def consultar(self, tabela, campo, valor):
-        conn = self.get_conexao(self.nome_bd)
-        cursor = conn.cursor()
-        consulta = f"SELECT * FROM {tabela} WHERE {campo} = ?"
-        cursor.execute(consulta, (valor,))
-        resultados = cursor.fetchall()
+        
+        conn.commit()
         conn.close()
-        return resultados
-    def update(self, tabela, id, coluna, novo_valor):
-        conn = self.get_conexao(self.nome_bd)
+        print(f'ID do objeto adicionado: {idFK}')
+        return idFK
+        
+    def consultar(self, tabela, campo, valor):
+        conn = self.get_conexao()
         cursor = conn.cursor()
-        consulta = f"UPDATE {tabela} SET {coluna} = ? WHERE id = ?"
+        
+        if tabela == "Item":
+            consulta = f"SELECT * FROM {tabela} WHERE {campo} = ?"
+            cursor.execute(consulta, (valor,))
+            resultados = cursor.fetchall()
+            if resultados:
+                print("\nResultados encontrados:")
+                for linha in resultados:
+                    print(f"\nID: {linha[0]}")
+                    print(f"Data: {linha[1]}")
+                    print(f"Descrição: {linha[2]}")
+                    print(f"Setor: {linha[3]}")
+                    print(f"Localidade: {linha[4]}")
+                    print(f"Em exposição: {'Sim' if linha[5] else 'Não'}")
+                    print(f"Nome: {linha[6]}")
+                    print(f"Custo mensal: {linha[7]}")
+            else:
+                print("\nNenhum resultado encontrado")
+        
+        elif tabela == "Obras":
+            # JOIN para trazer dados de Item e Obras
+            consulta = f"""
+            SELECT Item.id, Item.data, Item.descricao, Item.setor, Item.localidade, Item.exposicao, Item.nome, Item.custoMes,
+                   Obras.movimentoArtistico, Obras.restaurado, Obras.dataRestauracao, Obras.autor
+            FROM Item
+            JOIN Obras ON Item.id = Obras.item_id
+            WHERE Obras.{campo} = ?
+            """
+            cursor.execute(consulta, (valor,))
+            resultados = cursor.fetchall()
+            if resultados:
+                print("\nResultados encontrados:")
+                for linha in resultados:
+                    print(f"\nID: {linha[0]}")
+                    print(f"Data: {linha[1]}")
+                    print(f"Descrição: {linha[2]}")
+                    print(f"Setor: {linha[3]}")
+                    print(f"Localidade: {linha[4]}")
+                    print(f"Em exposição: {'Sim' if linha[5] else 'Não'}")
+                    print(f"Nome: {linha[6]}")
+                    print(f"Custo mensal: {linha[7]}")
+                    print(f"Movimento Artístico: {linha[8]}")
+                    print(f"Restaurado: {'Sim' if linha[9] else 'Não'}")
+                    print(f"Data Restauração: {linha[10]}")
+                    print(f"Autor: {linha[11]}")
+            else:
+                print("\nNenhum resultado encontrado")
+        
+        elif tabela == "Artefatos":
+            # JOIN para trazer dados de Item e Artefatos
+            consulta = f"""
+            SELECT Item.id, Item.data, Item.descricao, Item.setor, Item.localidade, Item.exposicao, Item.nome, Item.custoMes,
+                   Artefatos.epoca, Artefatos.fossil, Artefatos.mineral, Artefatos.origemHumana
+            FROM Item
+            JOIN Artefatos ON Item.id = Artefatos.item_id
+            WHERE Artefatos.{campo} = ?
+            """
+            cursor.execute(consulta, (valor,))
+            resultados = cursor.fetchall()
+            if resultados:
+                print("\nResultados encontrados:")
+                for linha in resultados:
+                    print(f"\nID: {linha[0]}")
+                    print(f"Data: {linha[1]}")
+                    print(f"Descrição: {linha[2]}")
+                    print(f"Setor: {linha[3]}")
+                    print(f"Localidade: {linha[4]}")
+                    print(f"Em exposição: {'Sim' if linha[5] else 'Não'}")
+                    print(f"Nome: {linha[6]}")
+                    print(f"Custo mensal: {linha[7]}")
+                    print(f"Época: {linha[8]}")
+                    print(f"Fóssil: {'Sim' if linha[9] else 'Não'}")
+                    print(f"Mineral: {'Sim' if linha[10] else 'Não'}")
+                    print(f"Origem Humana: {'Sim' if linha[11] else 'Não'}")
+            else:
+                print("\nNenhum resultado encontrado")
+        
+        conn.close()
+    def update(self, tabela, id, coluna, novo_valor):
+        conn = self.get_conexao()
+        cursor = conn.cursor()
+        if tabela == "Item":
+            consulta = f"UPDATE Item SET {coluna} = ? WHERE id = ?"
+        elif tabela == "Obras":
+            consulta = f"UPDATE Obras SET {coluna} = ? WHERE item_id = ?"
+        elif tabela == "Artefatos":
+            consulta = f"UPDATE Artefatos SET {coluna} = ? WHERE item_id = ?"
         cursor.execute(consulta, (novo_valor, id))
         conn.commit()
         conn.close()
     def deletar(self, tabela, id):
-        conn = self.get_conexao(self.nome_bd)
+        conn = self.get_conexao()
         cursor = conn.cursor()
-        consulta = f"DELETE FROM {tabela} WHERE id = ?"
+        cursor.execute("PRAGMA foreign_keys = ON;") 
+        
+        if tabela == "Item":
+            consulta = f"DELETE FROM Item WHERE id = ?"
+        elif tabela == "Obras":
+            consulta = f"DELETE FROM Obras WHERE item_id = ?"
+        elif tabela == "Artefatos":
+            consulta = f"DELETE FROM Artefatos WHERE item_id = ?"
+        
         cursor.execute(consulta, (id,))
         conn.commit()
         conn.close()
@@ -242,9 +325,11 @@ while True:
                 custo = input("Custo de exposição por mês: ")
             else:
                 custo = 0
-
+            
             novoItem = Item(data, descricao, setor, None, localidade, exposicao, nome, custo)
-            bd.inserir(novoItem)
+            idAtr = bd.inserir(novoItem)
+            novoItem.id = idAtr
+            itens.append(novoItem)
             conn.commit()
 
         elif criarTipo == 2:
@@ -272,7 +357,9 @@ while True:
                 dataRestauracao = ''
 
             novaObra = Obras(data, descricao, setor, None, localidade, exposicao, nome, custo, movimentoArtistico, restaurado, dataRestauracao, autor)
-            bd.inserir(novaObra)
+            idAtr = bd.inserir(novaObra)
+            novaObra.id = idAtr
+            itens.append(novaObra)
             conn.commit()
         elif criarTipo == 3:
             print("\n" + "─"*70)
@@ -293,7 +380,9 @@ while True:
             origemHumana = bool(int(input("Tem origem humana? (1 - Sim, 0 - Não): ")))
 
             novoArtefato = Artefatos(data, descricao, setor, None, localidade, exposicao, nome, custo, epoca, fossil, mineral, origemHumana)
-            bd.inserir(novoArtefato)
+            idAtr = bd.inserir(novoArtefato)
+            novoArtefato.id = idAtr
+            itens.append(novoArtefato)
             conn.commit()
         
         print("\nItem inserido com sucesso!\n")
@@ -382,7 +471,15 @@ while True:
             novoValor = input("Informe o novo valor da célula: ")
 
             bd.update(tabelaAlt, idAlt, coluna, novoValor)
+            
+            for item in itens:
+                if item.id == int(idAlt):
+                    if hasattr(item, coluna):
+                        setattr(item, coluna, novoValor)
+                    break
+            
             conn.commit()
+            print("\nCélula atualizada com sucesso!\n")
 
         elif alterarCelulaLinha == 2:
             print("\n" + "─"*70)
@@ -410,18 +507,40 @@ while True:
             if alterarTable == 1:
                 data = input("Data de aquisição [Ex: 12/02/2002]: ")
                 descricao = input("Descrição (o que é): ")
+                setor = input("Setor: ")
                 localidade = input("Localidade (onde o item foi encontrado): ")
+                exposicao = bool(int(input("Está em exposição? (1 - Sim, 0 - Não): ")))
+                nome = input("Nome do item: ")
+                if exposicao == 1:    
+                    custo = input("Custo de exposição por mês: ")
+                else:
+                    custo = 0
 
                 bd.update("Item", idAlt, "data", data)
                 bd.update("Item", idAlt, "descricao", descricao)
+                bd.update("Item", idAlt, "setor", setor)
                 bd.update("Item", idAlt, "localidade", localidade)
+                bd.update("Item", idAlt, "exposicao", exposicao)
+                bd.update("Item", idAlt, "nome", nome)
+                bd.update("Item", idAlt, "custoMes", custo)
+                
+                for item in itens:
+                    if item.id == int(idAlt):
+                        item.data = data
+                        item.descricao = descricao
+                        item.setor = setor
+                        item.localidade = localidade
+                        item.exposicao = exposicao
+                        item.nome = nome
+                        item.custoMes = custo
+                        break
                 
                 conn.commit()
                 print("\nItem atualizado com sucesso!\n")
                 
             elif alterarTable == 2:
                 print("\n" + "─"*70)
-                print("ALTERAR LINHA DA TABELA OBJETOS".center(70))
+                print("ALTERAR LINHA DA TABELA OBRAS".center(70))
                 print("─"*70 + "\n")
 
                 data = input("Data de aquisição [Ex: 12/02/2002]: ")
@@ -441,10 +560,11 @@ while True:
                     dataRestauracao = input("Data da restauração [Ex: 12/03/2004]: ")
                 else:
                     dataRestauracao = ''
+                
                 bd.update("Item", idAlt, "data", data)
                 bd.update("Item", idAlt, "descricao", descricao)
-                bd.update("Item", idAlt, "localidade", localidade)
                 bd.update("Item", idAlt, "setor", setor)
+                bd.update("Item", idAlt, "localidade", localidade)
                 bd.update("Item", idAlt, "exposicao", exposicao)
                 bd.update("Item", idAlt, "nome", nome)
                 bd.update("Item", idAlt, "custoMes", custo)
@@ -452,6 +572,21 @@ while True:
                 bd.update("Obras", idAlt, "movimentoArtistico", movimentoArtistico)
                 bd.update("Obras", idAlt, "restaurado", restaurado)
                 bd.update("Obras", idAlt, "dataRestauracao", dataRestauracao)
+                
+                for item in itens:
+                    if item.id == int(idAlt) and isinstance(item, Obras):
+                        item.data = data
+                        item.descricao = descricao
+                        item.setor = setor
+                        item.localidade = localidade
+                        item.exposicao = exposicao
+                        item.nome = nome
+                        item.custoMes = custo
+                        item.autor = autor
+                        item.movimentoArtistico = movimentoArtistico
+                        item.restaurado = restaurado
+                        item.dataRestauracao = dataRestauracao
+                        break
                 
                 conn.commit()
                 print("\nObra atualizada com sucesso!\n")
@@ -475,8 +610,8 @@ while True:
 
                 bd.update("Item", idAlt, "data", data)
                 bd.update("Item", idAlt, "descricao", descricao)
-                bd.update("Item", idAlt, "localidade", localidade)
                 bd.update("Item", idAlt, "setor", setor)
+                bd.update("Item", idAlt, "localidade", localidade)
                 bd.update("Item", idAlt, "exposicao", exposicao)
                 bd.update("Item", idAlt, "nome", nome)
                 bd.update("Item", idAlt, "custoMes", custo)
@@ -484,6 +619,21 @@ while True:
                 bd.update("Artefatos", idAlt, "fossil", fossil)
                 bd.update("Artefatos", idAlt, "mineral", mineral)
                 bd.update("Artefatos", idAlt, "origemHumana", origemHumana)
+                
+                for item in itens:
+                    if item.id == int(idAlt) and isinstance(item, Artefatos):
+                        item.data = data
+                        item.descricao = descricao
+                        item.setor = setor
+                        item.localidade = localidade
+                        item.exposicao = exposicao
+                        item.nome = nome
+                        item.custoMes = custo
+                        item.epoca = epoca
+                        item.fossil = fossil
+                        item.mineral = mineral
+                        item.origemHumana = origemHumana
+                        break
                 
                 conn.commit()
                 print("\nArtefato atualizado com sucesso!\n")
@@ -497,8 +647,12 @@ while True:
         
         idDel = input("informe o ID do objeto que desejas excluir: ")
 
+        for i, item in enumerate(itens):
+            if item.id == int(idDel): 
+                itens.pop(i) 
+                break
+
         bd.deletar("Item", idDel)
-        conn.commit()
         
         print("\nObjeto excluido com sucesso!\n")
         
