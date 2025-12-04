@@ -41,12 +41,6 @@ class Artefatos(Item):
         self.origemHumana = origemHumana
         self.emprestado = False
 
-    def reservaEstudo(self, pesquisador, instituicao):
-        self.exposicao = False
-        self.pesquisador = pesquisador
-        self.instituicao = instituicao
-        self.emprestado = True
-
 class BancoDeDados():
     def __init__(self, nome_bd='museu.db'):
         self.nome_bd = nome_bd
